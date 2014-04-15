@@ -57,7 +57,7 @@ sub flatten_param {
 
     }
     else {
-        push @r, ($k, $v);
+        push @r, [$k, $v];
     }
     return @r;
 }
@@ -76,10 +76,8 @@ Returns a string containing the signature.
 sub signature($) {
     my($params) = @_;
 
-    $params = { map { flatten_param($_, $params->{$_}) } keys %$params };
-    $params = { map { rfc5849_encode($_) => rfc5849_encode($params->{$_}) } keys %$params };
-
-    my $s = join '&', map { $_ . '=' . $params->{$_}   } sort { $a cmp $b || $params->{$a} cmp $params->{$b} }  keys %$params;
+    $params = [ map { [ rfc5849_encode($_->[0]), rfc5849_encode($_->[1])] } map { flatten_param($_, $params->{$_}) } keys %$params ];
+    my $s = join '&', map { $_->[0] . '=' . $_->[1]  }  sort { $a->[0] cmp $b->[0]|| $a->[1] cmp $b->[1] }  @$params;
     my $sig = hmac_sha256_hex($s, $GoCardless::Config::app_secret);
     return $sig;
 }
@@ -245,6 +243,11 @@ In the case of success, message will be a Perl data structure representing the b
 sub get_bill($) {
     my($bill_id) = @_;
     return do_get('/api/v1/bills/'.$bill_id);
+}
+
+sub get_payout($) {
+    my($pid) = @_;
+    return do_get('/api/v1/payouts/'.$pid);
 }
 
 1;
